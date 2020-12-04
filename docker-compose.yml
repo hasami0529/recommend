@@ -1,0 +1,34 @@
+version: '2'
+
+services:
+  db:
+    image: 'mysql:5.7'
+    env_file:
+      - '.env'
+    volumes:
+      - ./data:/var/lib/mysql
+    ports:
+      - '3306:3306'
+  redis:
+    image: 'redis:3.0-alpine'
+    command: redis-server --requirepass devpassword
+    ports:
+      - '6379:6379'
+  api:
+    build: .
+    command: >
+      gunicorn -c "python:config.gunicorn" --reload "recommender.app:create_app()"
+    env_file:
+      - '.env'
+    volumes:
+      - .:/Recommender
+    ports:
+      - '8000:8000'
+    expose:
+      - "8000"
+
+  celery:
+    build: .
+    command: celery worker -B -l info -A recommender.blueprints.article.tasks
+    volumes:
+      - '.:/Recommender'
